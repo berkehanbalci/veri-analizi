@@ -1,12 +1,13 @@
-# Veri Analizi — Ülkeler
+# Veri Analizi — Ülkeler ve Performans
 
-Pandas ile bir ülke veri seti üzerinde veri okuma, temizleme ve analiz çalışması. Gerçek dünya verisinin nasıl keşfedildiğini, kirli/eksik değerlerin nasıl temizlendiğini ve gruplama (groupby) ile nasıl özet çıkarıldığını gösterir.
+Pandas ile veri okuma, temizleme, analiz ve görselleştirme çalışması; ayrıca SQLite üzerinde büyük veriyle index kullanımının sorgu performansına etkisinin ölçülmesi.
 
 ## Kullanılan Teknolojiler
 
 - Python
 - Pandas (veri işleme ve analiz)
 - Matplotlib (görselleştirme)
+- SQLite (veritabanı, index performans testi)
 
 ## Proje Yapısı
 
@@ -19,16 +20,22 @@ veri-analizi/
 ├── gorsellestir.py           # Temiz veri üzerinde grafik oluşturma
 ├── ilk_pandas.py             # Pandas temelleri (DataFrame, filtreleme, sıralama)
 ├── en_kalabalik_ulkeler.png  # Üretilen grafik
+├── satislar.csv              # 50.000 satırlık büyük veri seti (performans testi için)
+├── performans_test.py        # Index'siz/index'li sorgu süresi karşılaştırması
 └── README.md
 ```
 
 Her dosyanın tek bir sorumluluğu vardır: `temizle.py` sadece temizler, `ulke_analiz.py` sadece analiz eder, `gorsellestir.py` sadece görselleştirir. Temizlik mantığı tek bir yerde tanımlıdır; diğer dosyalar doğrudan temizlenmiş veriyi (`temiz_ulkeler.csv`) okur.
+
+`satislar.db` (SQLite veritabanı dosyası) `.gitignore` içindedir — `performans_test.py` çalıştırıldığında `satislar.csv`'den otomatik olarak yeniden oluşturulur, bu yüzden depoya dahil edilmez.
 
 ## Kurulum
 
 ```
 pip install pandas matplotlib
 ```
+
+(`sqlite3` Python ile birlikte gelir, ayrıca kurulum gerekmez.)
 
 ## Çalıştırma
 
@@ -38,6 +45,7 @@ Sırasıyla çalıştırın (temizlik önce yapılmalı, diğerleri temiz veriyi
 python temizle.py
 python ulke_analiz.py
 python gorsellestir.py
+python performans_test.py
 ```
 
 ## Ne Yapıyor?
@@ -71,6 +79,23 @@ Temiz veri üzerinde çubuk grafik oluşturur:
 
 Hindistan ve Çin, diğer ülkelerden belirgin şekilde ayrışıyor — dünya nüfusunun büyük kısmı bu iki ülkede yoğunlaşmış durumda.
 
+### 4. Büyük Veri ve Performans (`performans_test.py`)
+50.000 satırlık bir satış veri seti (`satislar.csv`) SQLite'a yüklenir (`to_sql`) ve aynı sorgu iki durumda karşılaştırılır:
+
+1. **Index'siz arama** — veritabanı tabloyu baştan sona tarar (`SCAN`)
+2. **Index'li arama** — `CREATE INDEX` ile oluşturulan index üzerinden doğrudan bulunur (`SEARCH`)
+
+Gürültüyü azaltmak için her sorgu 1.000 kez tekrarlanır ve ortalama süre alınır (`time.perf_counter`). Ölçülen sonuç:
+
+| Durum       | Ortalama sorgu süresi |
+|-------------|------------------------|
+| Index'siz   | ~0.0050 saniye         |
+| Index'li    | ~0.00008 saniye        |
+
+**~62 kat hızlanma.** `EXPLAIN QUERY PLAN` ile bu fark doğrulanır: index'siz durumda `SCAN satislar`, index'li durumda `SEARCH satislar USING INDEX idx_musteri` görülür.
+
+> Not: 50.000 satırda fark zaten belirgin; gerçek dünyada milyonlarca satırlı tablolarda index eksikliği dakikalar süren sorgulara yol açabilir.
+
 ## Öğrenilen Kavramlar
 
 - DataFrame, Series
@@ -81,3 +106,7 @@ Hindistan ve Çin, diğer ülkelerden belirgin şekilde ayrışıyor — dünya 
 - Method chaining (zincirleme işlemler)
 - Matplotlib ile temel görselleştirme (çubuk grafik)
 - Tek sorumluluk ilkesi: temizlik, analiz ve görselleştirmeyi ayrı dosyalara bölme
+- Pandas → SQLite köprüsü (`to_sql`)
+- Performans ölçümü (`time.perf_counter`, tekrarlı ölçüm ile gürültü azaltma)
+- Index kavramı ve sorgu hızına etkisi
+- `EXPLAIN QUERY PLAN` ile sorgu planını okuma (`SCAN` vs `SEARCH`)
