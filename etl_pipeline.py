@@ -14,7 +14,7 @@ def extract(sehirler):
 
     for sehir_adi in sehirler:
         try:
-            geo_url =  geo_url = "https://geocoding-api.open-meteo.com/v1/search"
+            geo_url = "https://geocoding-api.open-meteo.com/v1/search"
             geo_yanit = requests.get(geo_url, params={"name": sehir_adi, "count": 1})
             geo_veri = geo_yanit.json()
 
